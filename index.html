@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測度論フラッシュカード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- MathJax CDNの追加 -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        // MathJaxの設定
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']] // インライン数式を$ $で囲む
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            background-color: #e0f2fe;
+            border: 2px solid #90cdf4;
+            border-radius: 10px;
+            padding: 25px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+        .card-content {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c5282;
+            text-align: center;
+            word-break: break-word;
+        }
+        .card-definition {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-top: 10px;
+            text-align: left;
+            word-break: break-word;
+        }
+        .hidden {
+            display: none;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #3182ce;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #edf2f7;
+            color: #2d3748;
+            border: 1px solid #cbd5e0;
+        }
+        .btn-secondary:hover {
+            background-color: #e2e8f0;
+            transform: translateY(-2px);
+        }
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .input-section input {
+            padding: 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .input-section button {
+            width: 100%;
+        }
+        .feedback-message {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .feedback-correct {
+            color: #38a169;
+        }
+        .feedback-incorrect {
+            color: #e53e3e;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 5px;
+            height: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4299e1;
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+        .progress-text {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+        }
+        .modal-close-btn:hover {
+            color: #2d3748;
+        }
+        .start-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .start-screen h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c5282;
+        }
+        .start-screen p {
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+        .start-screen button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">測度論フラッシュカード</h1>
+
+        <div id="start-screen" class="start-screen">
+            <h2>測度論の用語を覚えよう！</h2>
+            <p>測度論の主要な定義や定理の内容がフラッシュカード形式で覚えられるよ！</p>
+            <p>「学習開始」ボタンを押してスタート！</p>
+            <button id="start-button" class="btn btn-primary">学習開始！</button>
+        </div>
+
+        <div id="flashcard-section" class="hidden">
+            <div class="card" id="flashcard">
+                <div id="card-front" class="card-content"></div>
+                <div id="card-back" class="card-definition hidden"></div>
+            </div>
+
+            <div class="button-group" id="card-buttons">
+                <button id="show-answer-button" class="btn btn-primary">答えを見る</button>
+                <button id="next-card-button" class="btn btn-secondary hidden">次のカード</button>
+            </div>
+
+            <div id="input-section" class="input-section hidden">
+                <input type="text" id="user-input" placeholder="用語を入力してください..." class="text-center">
+                <button id="check-answer-button" class="btn btn-primary">答えを確認</button>
+            </div>
+
+            <div id="feedback-message" class="feedback-message hidden"></div>
+
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div id="progress-text" class="progress-text">0 / 0</div>
+        </div>
+    </div>
+
+    <div id="completion-modal" class="modal hidden">
+        <div class="modal-content">
+            <!-- closeModalとrestartLearningをグローバルスコープに配置 -->
+            <button class="modal-close-btn" onclick="window.closeModal()">&times;</button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">おめでとうございます！</h2>
+            <p class="text-gray-700 mb-6">すべてのカードを学習しました。</p>
+            <button class="btn btn-primary" onclick="window.restartLearning()">もう一度学習する</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebaseの設定と初期化
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null;
+        let flashcards = [];
+        let currentCardIndex = 0;
+        let isShowingAnswer = false;
+        let learningMode = 'flashcard'; // 'flashcard' or 'input'
+
+        // PDFから抽出した用語と定義のデータ
+        const pdfData = [
+            { term: "有限加法族", definition: "空間 Xの部分集合の族Fが、A∈Fならば $A^{c}\\in\\mathfrak{F}$、A, B∈FならばA∪B∈F なる3つの条件を満たすとき、Fを有限加法族という。" },
+            { term: "Jordan 測度", definition: "F-集合函数 $m(A)$ がすべての $A\\in\\mathfrak{F}$ に対して $0\\le m(A)\\le\\infty,$ 特に $m(\\emptyset)=0$、A, B∈F. $A\\cap B=\\emptyset$ ならば $m(A+B)=m(A)+m(B)$ を満たすとき、mを (Fの上の) Jordan 測度という。" },
+            { term: "外測度", definition: "空間Xのすべての部分集合Aに対して定義された集合函数 $\\Gamma(A)$ があって $0\\le\\Gamma(A)\\le\\infty,\\Gamma(\\emptyset)=0,$ $A\\subset B$ ならば $\\Gamma(A)\\le\\Gamma(B)$, $\\Gamma(\\bigcup_{n=1}^{\\infty}A_{n})\\le\\sum_{(n=1)}^{\\infty}\\Gamma(A_{n})$ なる3つの条件を満たすとき、$\\Gamma$ を外測度という。" },
+            { term: "可測", definition: "空間Xに外測度$\\Gamma$が定義されているとする、集合 $E\\subset X$ が次の条件を満たすとき、Eは $\\Gamma$-可測であるという: 任意の $A\\subset X$ に対して $\\Gamma(A)=\\Gamma(A\\cap E)+\\Gamma(A\\cup E^{c})$。" },
+            { term: "零集合", definition: "(外)測度$\\Gamma$に対して $\\Gamma(E)=0$ なる集合を零集合という。" },
+            { term: "完全加法族", definition: "空間 Xの部分集合の族Bがあって $\\emptyset\\in\\mathfrak{B}$、$E\\in\\mathfrak{B}$ ならば $E^{c}\\in\\mathfrak{B}$、$E_{n}\\in\\mathfrak{B}(n=1,2,...)$ ならば $\\bigcup_{n=1}^{\\infty}E_{n}\\in\\mathfrak{B}$ なる3つの条件を満たすとき、Bを完全加法族という。" },
+            { term: "測度空間", definition: "空間 X にその部分集合の完全加法族BとBで定義された測度$\\mu$とを組み合わせて考えたものを測度空間といい、 $(X,\\mathfrak{B},\\mu)$ または $X(\\mathfrak{B},\\mu)$ と書く。" },
+            { term: "a.e.", definition: "集合 E∈Bの点に関係した命題があって、それが $\\mu(E_{0})=0$ なる集合 $E_{0}(\\subset E)$ の点以外のすべての点で成立するとき、その命題はEの上で $\\mu$ に関してほとんどいたる所で成立するといい、 $\\mu$-a.e. のように書く。" },
+            { term: "Borel 集合族", definition: "Euclid 空間 Rd の中の開集合の全体を含む最小の完全加法族をRにおける Borel 集合族といい、属する集合をBorel 集合と呼ぶ。" },
+            { term: "Borel 集合体 / σ-代数", definition: "空間 Xにおいてその部分集合の完全加法族Bが与えられているとき、BをXにおける Borel 集合体または$\\sigma$-代数と呼び、Bに属する集合をB-可測集合と呼ぶ。" },
+            { term: "Borel 空間 / 可測空間", definition: "また、(X,B)をBorel 空間または可測空間と呼ぶ。" },
+            { term: "Cantor 集合", definition: "Rにおける閉区間 [0.1] を $C_0$ とする。まず $C_0$ を3等分して中央の開区間)を取り除き、次に2つの閉区間の各々を3等分してその中央の開区間 $(\\frac{1}{9},\\frac{2}{9}),(\\frac{7}{9},\\frac{8}{9})$ を取り除き、この手続きを限りなく続けて残った集合EをCantor 集合という。" },
+            { term: "Cantor 函数", definition: "$x\\in E$ (Cantor 集合)のときの3進展開はすべて数字1を持たないように一意に表される.x $x=0.\\alpha_{1}\\alpha_{2}...$ (3進小数)に対して、 $\\alpha_{n}=0$ ならば $\\beta_{n}=0$ 0,0 $\\alpha_{n}=2$ ならば $\\beta_{n}=1$ なる2進小数 $\\beta_{1}\\beta_{2}...$ を作り $\\varphi(x)=0.\\beta_{1}\\beta_{2}...$ (2進小数)と定義する。このときの $\\varphi:E\\rightarrow[0,1]$ を Cantor 函数という。" },
+            { term: "完備", definition: "測度空間 $(X,\\mathfrak{B},\\mu)$ に対して、 $\\mu(B)=0$ なる集合 B∈Bの部分集合がすべてはじめの完全加法族 Bに属するとき、測度空間 $(X,\\mathfrak{B},\\mu)$ は完備であるという。" },
+            { term: "完備化", definition: "$(X,\\mathfrak{B},\\mu),(X,\\overline{\\mathfrak{B}},\\overline{\\mu})$ を測度空間とする. $(X,\\overline{\\mathfrak{B}},\\overline{\\mu})$ が $(X,\\mathfrak{B},\\mu)$ の完備化とは (X,B, ) は (X,B,µ) を含む最小の完備測度空間であるということである。" },
+            { term: "測度から導かれた外測度", definition: "測度空間 $(X,\\mathfrak{B},\\mu)$ に対して、任意の $A\\subset X$ に対して $\\mu^{*}(A)=inf_{A\\subset B\\in\\mathfrak{B}}\\mu(B)$ とおくと、 $\\mu^{*}$ は外測度である。この$\\mu^*$を測度から導かれた外測度という。" },
+            { term: "拡張", definition: "$(X,\\mathfrak{F},m)$ を有限加法的測度空間, $(X,\\mathfrak{B},\\mu)$ を測度空間でFCBを満たすとする。$\\mu$がmの拡張であるとは、E∈Fならば $\\mu(E)=m(E)$ となることである。" },
+            { term: "Hopf の拡張定理 (Hopf-Kolmogorov theorem)", definition: "$(X,\\mathfrak{F},m)$ を有限加法的測度空間とする.mが $\\sigma(\\mathfrak{F})$ 上の測度に拡張できる必要十分条件は、mがF上で完全加法的であることである。さらに、 $(X,\\mathfrak{F},m)$ が有限であれば、その拡張は一意的である。" },
+            { term: "矩形集合 / 直積完全加法族 / 直積測度", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を測度空間とする。直積空間 $Z=X\\times Y$ の中で $K=E\\times F(E\\in\\mathfrak{B}_{X},F\\in\\mathfrak{B}_{Y})$ なる形の集合を矩形集合という。有限個の矩形集合の直和として表される集合の全体を含む最小の完全加法族 $\\mathfrak{B}_{Z}=\\sigma (\\mathfrak{F})$ を直積完全加法族といい、 $\\mathfrak{B}_{Z}=\\mathfrak{B}_{X}\\otimes\\mathfrak{B}_{Y}$ と書く。$\\mathfrak{B}_{z}\\in\\emptyset$ 測度で矩形集合 $K=E\\times F(\\mu_{X}(E)<\\infty,\\mu_{Y}(F)<\\infty)$ に対しては $\\mu(K)=\\mu_{X}(E)\\mu_{Y}(F)$ となるものを $\\mu_{X}\\&\\mu_{Y}$ との直積測度という。" },
+            { term: "$\{f>c\}$", definition: "空間XとX上の函数 $f:X\\rightarrow\\overline{\\mathbb{R}}$ に対して $\\{f>c\\}:=\\{x\\in X|f(x)>c\\}.$" },
+            { term: "単函数", definition: "集合Eを $E=E_{1}+E_{2}+\\cdot\\cdot\\cdot+E_{n}$ と有限個の集合の直和に分けて $f(x)=\\sum_{j=1}^{n}\\alpha_{j}\\chi_{E_{j}}(x)(\\alpha_{j}\\in\\mathbb{R},\\alpha_{j}\\ne\\alpha_{k}(j\\ne k))$ なる形に表される函数を単函数という。" },
+            { term: "$B$-可測函数", definition: "$(X,B)$を可測空間とする. $X$上の函数$f$が任意の実数 に対して $\\{f>c\\}\\in B$ を満たすとき、$f$を$B$-可測函数という。" },
+            { term: "Egoroff の定理", definition: "E∈B, $\\mu(E)<\\infty$ とし $f_{n}(n=1,2,...)$ はEの上でほとんどいたる所有限な値をとる可測函数であって、Eのほとんどすべての点で有限な $f(x)=lim_{n\\rightarrow\\infty}f_{n}(x)$ が存在するものとする。このとき任意の $\\epsilon>0$ に対して集合 $F\\in\\mathfrak{B}$ が存在して $F\\subset E,\\mu(E-F)<\\epsilon$ かつ $\{f_{n}\}$ はFの上で一様収束する。" },
+            { term: "非負関数の積分", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間, $f:X\\rightarrow[0,\\infty]$ を可測函数とする。fが単函数のときは、$f(x)=\\sum_{j=0}^{n}\\alpha_{j}\\chi_{E_{j}}(x)$ と表されるが、このとき $\\int_{X}fd\\mu:=\\sum_{j=1}^{n}\\alpha_{j}\\mu(E_{j})$ と定義する。一般の函数のときは、fに近づく単函数の単調増加列 $\{f_{n}\}$ の積分の極限によって定義する。" },
+            { term: "可積分", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間、 $f:X\\rightarrow\\overline{\\mathbb{R}}$ を函数とする。fの定積分の値が有限のとき、fは可積分であるという。" },
+            { term: "単調収束定理", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間、任意の $n\\in\\mathbb{N}$ に対して$f_{n}: X \\rightarrow \\overline{\\mathbb{R}}$を可測函数とし $\\begin{cases}0\\le f_{n}(x)\\le f_{n+1}(x)\\\\ f_{n}(x)\\rightarrow f(x)\\end{cases}$ $a.e.x\\in X$ を仮定する。このとき $\\int_{X}lim_{n\\rightarrow\\infty}f_{n}d\\mu=lim_{n\\rightarrow\\infty}\\int_{X}f_{n}d\\mu.$" },
+            { term: "Fatou の補題", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間、任意の $n\\in\\mathbb{N}$ に対して $f_{n}:X\\rightarrow[0,\\infty]$ を可測函数とすると $\\int_{X}lim_{n\\rightarrow\\infty}f_{n}d\\mu\\le lim_{n\\rightarrow\\infty}\\int_{X}f_{n}d\\mu$ ." },
+            { term: "Lebesgueの優収束定理", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間、任意の $n\\in\\mathbb{N}$ に対して $f_{n},f:X\\rightarrow\\overline{\\mathbb{R}}$ を可測函数とし $\\{\\begin{matrix}f_{n}\\rightarrow f&a.e.on~X,\\ \\exists h\\in L^{1}(X)s.t.|f_{n}|\\le h~a.e.on~X(\\forall n\\in\\mathbb{N})\\end{matrix}$ を仮定する。このとき $\\int_{X}lim_{n\\rightarrow\\infty}f_{n}d\\mu=lim_{n\\rightarrow\\infty}\\int_{X}f_{n}d\\mu.$" },
+            { term: "Lebesgue 測度空間", definition: "測度空間 $(\\mathbb{R}^{d},\\mathfrak{B}(\\mathbb{R}^{d}),m^{*})$ の完備拡張 $(\\mathbb{R}^{d},\\overline{\\mathfrak{B}(\\mathbb{R}^{d})},\\overline{m}^{*})$ を Lebesgue 測度空間と呼び、 $(\\mathbb{R}^{d},\\mathfrak{L}(\\mathbb{R}^{d}),m)$ で表す。" },
+            { term: "単調族", definition: "$\\mathcal{B}\\subset2^{X}$ とする. $\{E_{j}\}\\subset\\mathcal{B},E_{j}\\uparrow E$のとき $E\\in\\mathcal{B}$ かつ、 $\{E_{j}\}\\subset\\mathcal{B},E_{j}\\downarrow E$のとき $E\\in\\mathcal{B}$ であるとき、Bは単調族であるという。" },
+            { term: "単調族定理", definition: "$\\mathcal{A}\\subset2^{X}$ を有限加法族とする.Aを含む最小の単調族を $\\mathfrak{M}(\\mathcal{A})$ とかくと、 $\\mathfrak{M}(A)=\\sigma(A)$" },
+            { term: "Fubini の定理 (集合に対する)", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を $\\sigma$-有限測度空間, $E\\in\\mathfrak{B}_{X}\\otimes\\mathfrak{B}_{Y}$ とする. $\\mu_{Z}$ を$\\mu_{X}$と$\\mu_{Y}$ の直積測度とすると、 $x\\mapsto\\mu_{Y}(E_{x})$ は $\\mathfrak{B}_{X}.$ 可測, $y\\mapsto\\mu_{X}(E_{y})$ は $\\mathfrak{B}_{Y}$ 可測で $\\mu_{Z}(E)=\\int_{X}\\mu_{Y}(E_{x})d\\mu_{X}=\\int_{Y}\\mu_{X}(E_{y})d\\mu_{Y}.$ ただし $E_{x}:=\\{y\\in Y|(x,y)\\in E\\}\\in\\mathfrak{B}_{Y}.$" },
+            { term: "Tonelli の定理", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を$\\sigma$-有限測度空間, $f:X\\times Y\\rightarrow[0,\\infty]$ は $\\mathfrak{B}_{X}$ 可測函数とする。このとき、次が成り立つ。(a) $x\\in X$ に対して $y\\mapsto f(x,y)$ は $\\mathfrak{B}_{Y}$ 可測で、 $x\\mapsto\\int_{Y}f(x,y)d\\mu_{Y}$ は $\\mathfrak{B}_{X}-$ 可測、(b) $y\\in Y$ に対して $x\\mapsto f(x,y)$ は $\\mathfrak{B}_{X}$ 可測で、 $y\\mapsto\\int_{X}f(x,y)d\\mu_{X}$ は $\\mathfrak{B}_{Y}$ 可測.(c) $\\int_{X\\times Y}f(x,y)d(\\mu_{X}\\times\\mu_{Y})=\\int_{X}(\\int_{Y}f(x,y)d\\mu_{Y})d\\mu_{X}=\\int_{Y}(\\int_{X}f(x,y)d\\mu_{X})d\\mu_{Y}$." },
+            { term: "Fubini の定理 (L1関数に対する)", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を$\\sigma$-有限測度空間, $f:X\\times Y\\rightarrow\\overline{\\mathbb{R}}$ は $f\\in L^{1}(X\\times Y)$ とする。(a) $x\\in X$ に対して $y\\mapsto f(x,y)$ は $\\mathfrak{B}_{Y}$ 可測で、 $\\mu_{X}$ a.e. $x$ に対して $y\\mapsto f(x,y)$ は $\\mu_{Y}$ 可積分である。ここで $g(x):=\\begin{cases}\\int_{Y}f(x,y)d\\mu_{Y} & if~f(x,\\bullet)\\in L^{1}(Y),\\\\ 0 & otherwise.\\end{cases}$ とおくと、gは $\\mu_{X}$ 可積分、(b) $y\\in Y$ に対して $x\\mapsto f(x,y)$ は $\\mathfrak{B}_{X}$ 可測で、 $\\mu_{Y}$-a.e. y に対して $x\\mapsto f(x,y)$ は $\\mu_{X}$ 可積分である。ここで $h(y):=\\begin{cases}\\int_{X}f(x,y)d\\mu_{X} & if~f(\\bullet,y)\\in L^{1}(X),\\\\ 0 & otherwise.\\end{cases}$ とおくと、hは $\\mu_{Y}$ 可積分.(c) さらに $\\int_{X\\times Y}fd(\\mu_{X}\\times\\mu_{Y})=\\int_{X}gd\\mu_{X}=\\int_{Y}hd\\mu_{Y}$ ." },
+            { term: "Lp 空間", definition: "$p\\ge1$ とする、X上のB-可測函数fで $\\int_{X}|f|^{p}d\\mu<\\infty$ なるものの全体を同値関係 $f\\sim g\\Leftrightarrow f=g~a.e.on~X$ で割ったものを $L^{p}(X)$ と書く。" },
+            { term: "Lp-ノルム", definition: "$f\\in L^{p}(X)$ に対して $||f||_{p}:=[\\int_{X}|f|^{p}d\\mu]^{\\frac{1}{p}}$ をfの $L^p$-ノルムという。" },
+            { term: "符号付き測度 / 有限 / σ-有限", definition: "$(X, B)$ を可測空間とする。集合函数 $\\mu: \\mathfrak{B} \\rightarrow \\mathbb{R} \\cup \\{+\\infty\\}$ または $\\mu: \\mathfrak{B} \\rightarrow \\mathbb{R} \\cup \\{-\\infty\\}$ とする。$\\mu(\\emptyset)=0$ かつ $\\{A_{n}\\}_{n\\in\\mathbb{N}}\\subset\\mathfrak{B}$ (互いに素)ならば $\\mu(\\bigcup_{n\\in\\mathbb{N}} A_{n})=\\sum_{n\\in\\mathbb{N}} \\mu(A_{n})$ が成り立つとき、$\\mu$は $(X, B)$ 上の符号付き測度といい、$|\\mu(X)|<+\\infty$ のとき有限符号付き測度、$\\exists\\{X_{n}\\}\\subset\\mathfrak{B},X_{n}\\uparrow X,|\\mu(X_{n})|<\\infty$ ならば$\\sigma$-有限符号付き測度という。" },
+            { term: "絶対連続 / 特異", definition: "(X,B)を可測空間, $\\mu,$ $\\nu$を (X,B) 上の符号付き測度とする。$\\nu\\ll\\mu\\Leftrightarrow E\\in\\mathfrak{B}$ with $|\\mu|(E)=0\\Rightarrow\\nu(E)=0.$ となる場合、$\\nu$は$\\mu$に対して絶対連続であるという。また、$\\exists A\\in\\mathfrak{B}$ s.t. $|\\nu|(A)=0$ かつ $|\\mu|(X\\backslash A)=0$ となる場合、$\\nu$は$\\mu$に対して特異であるという。" },
+            { term: "絶対連続性", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間, $f\\in L^{1}(X)$ とする。このとき $\\forall\\epsilon>0$ に対して $\\exists\\delta > 0$ s. t. $\\forall A \\in \\mathfrak{B}: \\mu(A)<\\delta\\Rightarrow\\int_{A}fd\\mu<\\epsilon,\\int_{A}|f|d\\mu<\\epsilon$ が成り立つ。" },
+            { term: "Lebesgue 分離定理 / 絶対連続部分 / 特異部分", definition: "$(X,\\mathfrak{B},\\mu)$ を$\\sigma$-有限測度空間、$\\nu$を $(X,\\mathfrak{B})$ 上の有限符号付き測度とする。このとき、有限符号付き測度F, $\\psi$ が存在して $\\nu=F+\\psi,F\\ll\\mu,\\psi\\perp\\mu.$ となる。この分解を Lebesgue 分解と呼び、Fを$\\nu$に関する絶対連続部分、$\\psi$を$\\nu$に関する特異部分という。" },
+            { term: "Radon-Nikodym theorem / Radon-Nikodym 密度関数", definition: "$(X,\\mathfrak{B},\\mu)$ を$\\sigma$有限測度空間, $F:(X,\\mathfrak{B})$ 上の有限符号付き測度かつ $F\\ll\\mu.$ このとき $f\\in L^{1}(X)$ が存在して $F(E)=\\int_{E}fd\\mu,\\forall E\\in\\mathfrak{B}.$ このfをFのRadon-Nikodym 密度関数(導関数)と呼ぶ、また $f=\\frac{dF}{d\\mu}$ と書くこともある。" },
+            { term: "Lebesgue-Stieltjes 外測度", definition: "$F:[a,b]\\rightarrow\\mathbb{R}$ を右連続かつ単調増加な有界函数とする。このとき、 $A\\subset[a,b]$ に対し $\\mu^{*}(A):=inf\\{\\sum_{i\\in\\mathbb{N}}F(b_{i})-F(a_{i})|A\\subset\\bigcup_{i\\in\\mathbb{N}i}(a_{i},b_{i}]\\}$ とするとは [a,b]上の外測度となる。この$\\mu^*$を Lebesgue-Stieltjes 外測度という。" },
+            { term: "有界変動", definition: "$F:[a,b]\\rightarrow\\mathbb{R}$ とする。任意の分割 $a = x_0 < x_1 < \\dots < x_k = b$ に対して $\\sum_{i=1}^{k} |F(x_i) - F(x_{i-1})| < M$ を満たす $M\\ge0$ が存在するとき、Fは [a,b]上有界変動であるという。" }
+        ];
+
+        // DOM要素の取得
+        const startScreen = document.getElementById('start-screen');
+        const startButton = document.getElementById('start-button');
+        const flashcardSection = document.getElementById('flashcard-section');
+        const flashcard = document.getElementById('flashcard');
+        const cardFront = document.getElementById('card-front');
+        const cardBack = document.getElementById('card-back');
+        const showAnswerButton = document.getElementById('show-answer-button');
+        const nextCardButton = document.getElementById('next-card-button');
+        const inputSection = document.getElementById('input-section');
+        const userInput = document.getElementById('user-input');
+        const checkAnswerButton = document.getElementById('check-answer-button');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const completionModal = document.getElementById('completion-modal');
+
+        // Firebase認証状態の監視
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                console.log("Firebase authenticated. User ID:", userId);
+                // ユーザーが認証された後にデータをロードする
+                loadFlashcards();
+            } else {
+                // 匿名認証
+                try {
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Firebase authentication failed:", error);
+                }
+            }
+        });
+
+        // フラッシュカードのデータをFirestoreからロード
+        async function loadFlashcards() {
+            if (!userId) {
+                console.warn("User ID not available yet for loading flashcards.");
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/flashcards`, 'userProgress');
+
+            try {
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const savedState = docSnap.data();
+                    flashcards = savedState.flashcards || shuffleArray([...pdfData]);
+                    currentCardIndex = savedState.currentCardIndex || 0;
+                    learningMode = savedState.learningMode || 'flashcard';
+                    console.log("Flashcards loaded from Firestore:", flashcards);
+                } else {
+                    console.log("No saved flashcards found, initializing new set.");
+                    flashcards = shuffleArray([...pdfData]); // PDFデータをシャッフルして初期化
+                }
+                updateProgressBar();
+                displayCard();
+            } catch (e) {
+                console.error("Error loading flashcards:", e);
+                flashcards = shuffleArray([...pdfData]); // エラー時はPDFデータをシャッフルして初期化
+                updateProgressBar();
+                displayCard();
+            }
+        }
+
+        // フラッシュカードのデータをFirestoreに保存
+        async function saveFlashcards() {
+            if (!userId) {
+                console.warn("User ID not available, cannot save flashcards.");
+                return;
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/flashcards`, 'userProgress');
+            try {
+                await setDoc(userDocRef, {
+                    flashcards: flashcards,
+                    currentCardIndex: currentCardIndex,
+                    learningMode: learningMode
+                });
+                console.log("Flashcards saved to Firestore.");
+            } catch (e) {
+                console.error("Error saving flashcards:", e);
+            }
+        }
+
+        // 配列をシャッフルする関数 (Fisher-Yatesアルゴリズム)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // カードを表示する関数
+        function displayCard() {
+            if (flashcards.length === 0) {
+                cardFront.textContent = "カードがありません。";
+                cardBack.textContent = "";
+                showAnswerButton.classList.add('hidden');
+                nextCardButton.classList.add('hidden');
+                inputSection.classList.add('hidden');
+                feedbackMessage.classList.add('hidden');
+                return;
+            }
+
+            if (currentCardIndex >= flashcards.length) {
+                showCompletionModal();
+                return;
+            }
+
+            const currentCard = flashcards[currentCardIndex];
+            cardFront.textContent = currentCard.term;
+            cardBack.textContent = currentCard.definition;
+
+            // MathJaxを再レンダリング
+            if (window.MathJax) {
+                MathJax.typesetPromise([cardBack]).then(() => {
+                    // レンダリング後に表示状態を更新
+                    cardBack.classList.add('hidden');
+                    showAnswerButton.classList.remove('hidden');
+                    nextCardButton.classList.add('hidden');
+                    feedbackMessage.classList.add('hidden');
+                    userInput.value = ''; // 入力欄をクリア
+
+                    if (learningMode === 'flashcard') {
+                        inputSection.classList.add('hidden');
+                    } else { // 'input' mode
+                        inputSection.classList.remove('hidden');
+                        showAnswerButton.classList.add('hidden'); // 入力モードでは「答えを見る」ボタンを非表示
+                        userInput.focus();
+                    }
+                    isShowingAnswer = false;
+                    updateProgressBar();
+                }).catch((err) => console.error("MathJax typesetting failed:", err));
+            } else {
+                // MathJaxがロードされていない場合のフォールバック
+                cardBack.classList.add('hidden');
+                showAnswerButton.classList.remove('hidden');
+                nextCardButton.classList.add('hidden');
+                feedbackMessage.classList.add('hidden');
+                userInput.value = ''; // 入力欄をクリア
+
+                if (learningMode === 'flashcard') {
+                    inputSection.classList.add('hidden');
+                } else { // 'input' mode
+                    inputSection.classList.remove('hidden');
+                    showAnswerButton.classList.add('hidden'); // 入力モードでは「答えを見る」ボタンを非表示
+                    userInput.focus();
+                }
+                isShowingAnswer = false;
+                updateProgressBar();
+            }
+        }
+
+        // 進捗バーを更新する関数
+        function updateProgressBar() {
+            const progress = flashcards.length > 0 ? (currentCardIndex / flashcards.length) * 100 : 0;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${currentCardIndex} / ${flashcards.length}`;
+        }
+
+        // 「答えを見る」ボタンのイベントリスナー
+        showAnswerButton.addEventListener('click', () => {
+            cardBack.classList.remove('hidden');
+            showAnswerButton.classList.add('hidden');
+            nextCardButton.classList.remove('hidden');
+            isShowingAnswer = true;
+        });
+
+        // 「次のカード」ボタンのイベントリスナー
+        nextCardButton.addEventListener('click', () => {
+            currentCardIndex++;
+            displayCard();
+            saveFlashcards(); // カードを進めたら保存
+        });
+
+        // 「答えを確認」ボタンのイベントリスナー
+        checkAnswerButton.addEventListener('click', () => {
+            const currentCard = flashcards[currentCardIndex];
+            const userAnswer = userInput.value.trim();
+            const correctAnswer = currentCard.term.trim();
+
+            feedbackMessage.classList.remove('hidden');
+            if (userAnswer === correctAnswer) {
+                feedbackMessage.textContent = '正解です！';
+                feedbackMessage.classList.remove('feedback-incorrect');
+                feedbackMessage.classList.add('feedback-correct');
+                // 正解したら自動的に次のカードへ
+                setTimeout(() => {
+                    currentCardIndex++;
+                    displayCard();
+                    saveFlashcards();
+                }, 1000);
+            } else {
+                feedbackMessage.textContent = `不正解です。正解は「${correctAnswer}」でした。`;
+                feedbackMessage.classList.remove('feedback-correct');
+                feedbackMessage.classList.add('feedback-incorrect');
+                // 不正解でも答えを表示
+                cardBack.classList.remove('hidden');
+                showAnswerButton.classList.add('hidden');
+                nextCardButton.classList.remove('hidden'); // 不正解でも「次のカード」ボタンを表示
+                isShowingAnswer = true;
+            }
+        });
+
+        // Enterキーで答えを確認
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkAnswerButton.click();
+            }
+        });
+
+        // 学習完了モーダルを表示
+        function showCompletionModal() {
+            completionModal.classList.remove('hidden');
+        }
+
+        // 学習完了モーダルを閉じる
+        function closeModal() {
+            completionModal.classList.add('hidden');
+        }
+        // グローバルスコープでアクセスできるようにする
+        window.closeModal = closeModal;
+
+
+        // 学習を再開する
+        function restartLearning() {
+            closeModal();
+            currentCardIndex = 0;
+            flashcards = shuffleArray([...pdfData]); // カードをシャッフルしてリセット
+            saveFlashcards(); // リセットした状態を保存
+            displayCard();
+        }
+        // グローバルスコープでアクセスできるようにする
+        window.restartLearning = restartLearning;
+
+
+        // 開始ボタンのイベントリスナー
+        startButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            flashcardSection.classList.remove('hidden');
+            // 認証が完了しているか確認し、完了していればカードをロード
+            if (userId) {
+                loadFlashcards();
+            } else {
+                // 認証がまだの場合は、onAuthStateChangedでロードされるのを待つ
+                console.log("Waiting for Firebase authentication to complete before loading flashcards.");
+            }
+        });
+
+        // 初期表示
+        updateProgressBar();
+    </script>
+</body>
+</html>
