@@ -108,23 +108,21 @@
             background-color: #e2e8f0;
             transform: translateY(-2px);
         }
-        .input-section {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
+        .btn-success {
+            background-color: #48bb78;
+            color: white;
         }
-        .input-section input {
-            padding: 12px;
-            border: 2px solid #cbd5e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            width: 100%;
-            box-sizing: border-box;
-            text-align: center;
+        .btn-success:hover {
+            background-color: #38a169;
+            transform: translateY(-2px);
         }
-        .input-section button {
-            width: 100%;
+        .btn-danger {
+            background-color: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #e53e3e;
+            transform: translateY(-2px);
         }
         .feedback-message {
             margin-top: 15px;
@@ -230,12 +228,9 @@
 
             <div class="button-group" id="card-buttons">
                 <button id="show-answer-button" class="btn btn-primary">答えを見る</button>
-                <button id="next-card-button" class="btn btn-secondary hidden">次のカード</button>
-            </div>
-
-            <div id="input-section" class="input-section hidden">
-                <input type="text" id="user-input" placeholder="用語を入力してください..." class="text-center">
-                <button id="check-answer-button" class="btn btn-primary">答えを確認</button>
+                <button id="correct-button" class="btn btn-success hidden">正解</button>
+                <button id="incorrect-button" class="btn btn-danger hidden">不正解</button>
+                <button id="toggle-review-mode-button" class="btn btn-secondary hidden">不正解を復習</button>
             </div>
 
             <div id="feedback-message" class="feedback-message hidden"></div>
@@ -249,11 +244,13 @@
 
     <div id="completion-modal" class="modal hidden">
         <div class="modal-content">
-            <!-- closeModalとrestartLearningをグローバルスコープに配置 -->
             <button class="modal-close-btn" onclick="window.closeModal()">&times;</button>
             <h2 class="text-2xl font-bold text-gray-800 mb-4">おめでとうございます！</h2>
             <p class="text-gray-700 mb-6">すべてのカードを学習しました。</p>
-            <button class="btn btn-primary" onclick="window.restartLearning()">もう一度学習する</button>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="window.restartLearning()">もう一度学習する</button>
+                <button id="review-incorrect-from-modal" class="btn btn-danger hidden" onclick="window.startReviewFromModal()">不正解を復習</button>
+            </div>
         </div>
     </div>
 
@@ -269,10 +266,10 @@
         const auth = getAuth(app);
 
         let userId = null;
-        let flashcards = [];
+        let flashcards = []; // メインの学習用カードセット
+        let incorrectCards = []; // 不正解だったカードを格納する配列
         let currentCardIndex = 0;
-        let isShowingAnswer = false;
-        let learningMode = 'flashcard'; // 'flashcard' or 'input'
+        window.isReviewMode = false; // 復習モードかどうか (windowオブジェクトに明示的に定義)
 
         // PDFから抽出した用語と定義のデータ
         const pdfData = [
@@ -310,8 +307,8 @@
             { term: "Fubini の定理 (集合に対する)", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を $\\sigma$-有限測度空間, $E\\in\\mathfrak{B}_{X}\\otimes\\mathfrak{B}_{Y}$ とする. $\\mu_{Z}$ を$\\mu_{X}$と$\\mu_{Y}$ の直積測度とすると、 $x\\mapsto\\mu_{Y}(E_{x})$ は $\\mathfrak{B}_{X}.$ 可測, $y\\mapsto\\mu_{X}(E_{y})$ は $\\mathfrak{B}_{Y}$ 可測で $\\mu_{Z}(E)=\\int_{X}\\mu_{Y}(E_{x})d\\mu_{X}=\\int_{Y}\\mu_{X}(E_{y})d\\mu_{Y}.$ ただし $E_{x}:=\\{y\\in Y|(x,y)\\in E\\}\\in\\mathfrak{B}_{Y}.$" },
             { term: "Tonelli の定理", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を$\\sigma$-有限測度空間, $f:X\\times Y\\rightarrow[0,\\infty]$ は $\\mathfrak{B}_{X}$ 可測函数とする。このとき、次が成り立つ。(a) $x\\in X$ に対して $y\\mapsto f(x,y)$ は $\\mathfrak{B}_{Y}$ 可測で、 $x\\mapsto\\int_{Y}f(x,y)d\\mu_{Y}$ は $\\mathfrak{B}_{X}-$ 可測、(b) $y\\in Y$ に対して $x\\mapsto f(x,y)$ は $\\mathfrak{B}_{X}$ 可測で、 $y\\mapsto\\int_{X}f(x,y)d\\mu_{X}$ は $\\mathfrak{B}_{Y}$ 可測.(c) $\\int_{X\\times Y}f(x,y)d(\\mu_{X}\\times\\mu_{Y})=\\int_{X}(\\int_{Y}f(x,y)d\\mu_{Y})d\\mu_{X}=\\int_{Y}(\\int_{X}f(x,y)d\\mu_{X})d\\mu_{Y}$." },
             { term: "Fubini の定理 (L1関数に対する)", definition: "$(X,\\mathfrak{B}_{X},\\mu_{X}),(Y,\\mathfrak{B}_{Y},\\mu_{Y})$ を$\\sigma$-有限測度空間, $f:X\\times Y\\rightarrow\\overline{\\mathbb{R}}$ は $f\\in L^{1}(X\\times Y)$ とする。(a) $x\\in X$ に対して $y\\mapsto f(x,y)$ は $\\mathfrak{B}_{Y}$ 可測で、 $\\mu_{X}$ a.e. $x$ に対して $y\\mapsto f(x,y)$ は $\\mu_{Y}$ 可積分である。ここで $g(x):=\\begin{cases}\\int_{Y}f(x,y)d\\mu_{Y} & if~f(x,\\bullet)\\in L^{1}(Y),\\\\ 0 & otherwise.\\end{cases}$ とおくと、gは $\\mu_{X}$ 可積分、(b) $y\\in Y$ に対して $x\\mapsto f(x,y)$ は $\\mathfrak{B}_{X}$ 可測で、 $\\mu_{Y}$-a.e. y に対して $x\\mapsto f(x,y)$ は $\\mu_{X}$ 可積分である。ここで $h(y):=\\begin{cases}\\int_{X}f(x,y)d\\mu_{X} & if~f(\\bullet,y)\\in L^{1}(X),\\\\ 0 & otherwise.\\end{cases}$ とおくと、hは $\\mu_{Y}$ 可積分.(c) さらに $\\int_{X\\times Y}fd(\\mu_{X}\\times\\mu_{Y})=\\int_{X}gd\\mu_{X}=\\int_{Y}hd\\mu_{Y}$ ." },
-            { term: "Lp 空間", definition: "$p\\ge1$ とする、X上のB-可測函数fで $\\int_{X}|f|^{p}d\\mu<\\infty$ なるものの全体を同値関係 $f\\sim g\\Leftrightarrow f=g~a.e.on~X$ で割ったものを $L^{p}(X)$ と書く。" },
-            { term: "Lp-ノルム", definition: "$f\\in L^{p}(X)$ に対して $||f||_{p}:=[\\int_{X}|f|^{p}d\\mu]^{\\frac{1}{p}}$ をfの $L^p$-ノルムという。" },
+            { term: "$L^{p}$ 空間", definition: "$p\\ge1$ とする、X上のB-可測函数fで $\\int_{X}|f|^{p}d\\mu<\\infty$ なるものの全体を同値関係 $f\\sim g\\Leftrightarrow f=g~a.e.on~X$ で割ったものを $L^{p}(X)$ と書く。" },
+            { term: "$L^{p}$-ノルム", definition: "$f\\in L^{p}(X)$ に対して $||f||_{p}:=[\\int_{X}|f|^{p}d\\mu]^{\\frac{1}{p}}$ をfの $L^p$-ノルムという。" },
             { term: "符号付き測度 / 有限 / σ-有限", definition: "$(X, B)$ を可測空間とする。集合函数 $\\mu: \\mathfrak{B} \\rightarrow \\mathbb{R} \\cup \\{+\\infty\\}$ または $\\mu: \\mathfrak{B} \\rightarrow \\mathbb{R} \\cup \\{-\\infty\\}$ とする。$\\mu(\\emptyset)=0$ かつ $\\{A_{n}\\}_{n\\in\\mathbb{N}}\\subset\\mathfrak{B}$ (互いに素)ならば $\\mu(\\bigcup_{n\\in\\mathbb{N}} A_{n})=\\sum_{n\\in\\mathbb{N}} \\mu(A_{n})$ が成り立つとき、$\\mu$は $(X, B)$ 上の符号付き測度といい、$|\\mu(X)|<+\\infty$ のとき有限符号付き測度、$\\exists\\{X_{n}\\}\\subset\\mathfrak{B},X_{n}\\uparrow X,|\\mu(X_{n})|<\\infty$ ならば$\\sigma$-有限符号付き測度という。" },
             { term: "絶対連続 / 特異", definition: "(X,B)を可測空間, $\\mu,$ $\\nu$を (X,B) 上の符号付き測度とする。$\\nu\\ll\\mu\\Leftrightarrow E\\in\\mathfrak{B}$ with $|\\mu|(E)=0\\Rightarrow\\nu(E)=0.$ となる場合、$\\nu$は$\\mu$に対して絶対連続であるという。また、$\\exists A\\in\\mathfrak{B}$ s.t. $|\\nu|(A)=0$ かつ $|\\mu|(X\\backslash A)=0$ となる場合、$\\nu$は$\\mu$に対して特異であるという。" },
             { term: "絶対連続性", definition: "$(X,\\mathfrak{B},\\mu)$ を測度空間, $f\\in L^{1}(X)$ とする。このとき $\\forall\\epsilon>0$ に対して $\\exists\\delta > 0$ s. t. $\\forall A \\in \\mathfrak{B}: \\mu(A)<\\delta\\Rightarrow\\int_{A}fd\\mu<\\epsilon,\\int_{A}|f|d\\mu<\\epsilon$ が成り立つ。" },
@@ -329,14 +326,14 @@
         const cardFront = document.getElementById('card-front');
         const cardBack = document.getElementById('card-back');
         const showAnswerButton = document.getElementById('show-answer-button');
-        const nextCardButton = document.getElementById('next-card-button');
-        const inputSection = document.getElementById('input-section');
-        const userInput = document.getElementById('user-input');
-        const checkAnswerButton = document.getElementById('check-answer-button');
+        const correctButton = document.getElementById('correct-button'); // 正解ボタン
+        const incorrectButton = document.getElementById('incorrect-button'); // 不正解ボタン
+        const toggleReviewModeButton = document.getElementById('toggle-review-mode-button');
         const feedbackMessage = document.getElementById('feedback-message');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
         const completionModal = document.getElementById('completion-modal');
+        const reviewIncorrectFromModalButton = document.getElementById('review-incorrect-from-modal'); // モーダル内の不正解を復習ボタン
 
         // Firebase認証状態の監視
         onAuthStateChanged(auth, async (user) => {
@@ -375,18 +372,34 @@
                 if (docSnap.exists()) {
                     const savedState = docSnap.data();
                     flashcards = savedState.flashcards || shuffleArray([...pdfData]);
+                    incorrectCards = savedState.incorrectCards || []; // 不正解カードをロード
                     currentCardIndex = savedState.currentCardIndex || 0;
-                    learningMode = savedState.learningMode || 'flashcard';
+                    window.isReviewMode = savedState.isReviewMode || false; // 復習モードの状態をロード
                     console.log("Flashcards loaded from Firestore:", flashcards);
                 } else {
                     console.log("No saved flashcards found, initializing new set.");
                     flashcards = shuffleArray([...pdfData]); // PDFデータをシャッフルして初期化
+                    incorrectCards = [];
+                    window.isReviewMode = false;
                 }
+
+                // 初期表示時に適切なカードセットとボタンの状態を設定
                 updateProgressBar();
                 displayCard();
+                toggleReviewModeButton.textContent = window.isReviewMode ? '通常学習に戻る' : '不正解を復習';
+                
+                // 不正解カードがある場合にのみ「不正解を復習」ボタンを表示
+                if (incorrectCards.length > 0) {
+                    toggleReviewModeButton.classList.remove('hidden');
+                } else {
+                    toggleReviewModeButton.classList.add('hidden');
+                }
+
             } catch (e) {
                 console.error("Error loading flashcards:", e);
                 flashcards = shuffleArray([...pdfData]); // エラー時はPDFデータをシャッフルして初期化
+                incorrectCards = [];
+                window.isReviewMode = false;
                 updateProgressBar();
                 displayCard();
             }
@@ -403,8 +416,9 @@
             try {
                 await setDoc(userDocRef, {
                     flashcards: flashcards,
+                    incorrectCards: incorrectCards, // 不正解カードも保存
                     currentCardIndex: currentCardIndex,
-                    learningMode: learningMode
+                    isReviewMode: window.isReviewMode // 復習モードの状態も保存
                 });
                 console.log("Flashcards saved to Firestore.");
             } catch (e) {
@@ -423,22 +437,54 @@
 
         // カードを表示する関数
         function displayCard() {
-            if (flashcards.length === 0) {
-                cardFront.textContent = "カードがありません。";
-                cardBack.textContent = "";
-                showAnswerButton.classList.add('hidden');
-                nextCardButton.classList.add('hidden');
-                inputSection.classList.add('hidden');
-                feedbackMessage.classList.add('hidden');
+            const currentSet = window.isReviewMode ? incorrectCards : flashcards;
+
+            // ボタンの状態をリセット
+            showAnswerButton.classList.remove('hidden'); // 常に「答えを見る」から開始
+            correctButton.classList.add('hidden');
+            incorrectButton.classList.add('hidden');
+            feedbackMessage.classList.add('hidden');
+            cardBack.classList.add('hidden'); // 定義も非表示にリセット
+
+            if (currentSet.length === 0) {
+                if (window.isReviewMode) {
+                    cardFront.textContent = "復習する不正解のカードがありません！";
+                    // 復習モードを自動で終了し、通常学習に戻る
+                    window.isReviewMode = false;
+                    flashcards = shuffleArray([...pdfData]); // メインセットをシャッフル
+                    currentCardIndex = 0;
+                    toggleReviewModeButton.textContent = '不正解を復習';
+                    toggleReviewModeButton.classList.add('hidden'); // 不正解カードがないのでボタンを非表示
+                    saveFlashcards();
+                    // 通常学習モードの最初のカードを表示
+                    displayCard();
+                    return;
+                } else {
+                    cardFront.textContent = "カードがありません。";
+                }
                 return;
             }
 
-            if (currentCardIndex >= flashcards.length) {
-                showCompletionModal();
+            if (currentCardIndex >= currentSet.length) {
+                // 現在のモードのカードがすべて表示された場合
+                if (window.isReviewMode) {
+                    showCompletionModal("復習モード完了！", "すべての不正解カードを復習しました。", incorrectCards.length > 0);
+                    // 復習モードを自動で終了し、通常学習に戻る
+                    window.isReviewMode = false;
+                    flashcards = shuffleArray([...pdfData]); // メインセットをシャッフル
+                    currentCardIndex = 0;
+                    toggleReviewModeButton.textContent = '不正解を復習';
+                    saveFlashcards();
+                    displayCard(); // 通常学習モードの最初のカードを表示
+                    return;
+                } else {
+                    showCompletionModal("おめでとうございます！", "すべてのカードを学習しました。", incorrectCards.length > 0);
+                }
+                saveFlashcards();
                 return;
             }
 
-            const currentCard = flashcards[currentCardIndex];
+            const currentCard = currentSet[currentCardIndex];
             cardFront.textContent = currentCard.term;
             cardBack.textContent = currentCard.definition;
 
@@ -446,102 +492,121 @@
             if (window.MathJax) {
                 MathJax.typesetPromise([cardBack]).then(() => {
                     // レンダリング後に表示状態を更新
-                    cardBack.classList.add('hidden');
-                    showAnswerButton.classList.remove('hidden');
-                    nextCardButton.classList.add('hidden');
-                    feedbackMessage.classList.add('hidden');
-                    userInput.value = ''; // 入力欄をクリア
-
-                    if (learningMode === 'flashcard') {
-                        inputSection.classList.add('hidden');
-                    } else { // 'input' mode
-                        inputSection.classList.remove('hidden');
-                        showAnswerButton.classList.add('hidden'); // 入力モードでは「答えを見る」ボタンを非表示
-                        userInput.focus();
-                    }
-                    isShowingAnswer = false;
+                    window.isShowingAnswer = false; // windowオブジェクトのプロパティとして参照
                     updateProgressBar();
                 }).catch((err) => console.error("MathJax typesetting failed:", err));
             } else {
                 // MathJaxがロードされていない場合のフォールバック
-                cardBack.classList.add('hidden');
-                showAnswerButton.classList.remove('hidden');
-                nextCardButton.classList.add('hidden');
-                feedbackMessage.classList.add('hidden');
-                userInput.value = ''; // 入力欄をクリア
-
-                if (learningMode === 'flashcard') {
-                    inputSection.classList.add('hidden');
-                } else { // 'input' mode
-                    inputSection.classList.remove('hidden');
-                    showAnswerButton.classList.add('hidden'); // 入力モードでは「答えを見る」ボタンを非表示
-                    userInput.focus();
-                }
-                isShowingAnswer = false;
+                window.isShowingAnswer = false; // windowオブジェクトのプロパティとして参照
                 updateProgressBar();
+            }
+
+            // 不正解カードがある場合は「不正解を復習」ボタンを表示
+            if (incorrectCards.length > 0) {
+                toggleReviewModeButton.classList.remove('hidden');
+            } else {
+                toggleReviewModeButton.classList.add('hidden');
             }
         }
 
         // 進捗バーを更新する関数
         function updateProgressBar() {
-            const progress = flashcards.length > 0 ? (currentCardIndex / flashcards.length) * 100 : 0;
+            const currentSet = window.isReviewMode ? incorrectCards : flashcards;
+            const progress = currentSet.length > 0 ? (currentCardIndex / currentSet.length) * 100 : 0;
             progressBar.style.width = `${progress}%`;
-            progressText.textContent = `${currentCardIndex} / ${flashcards.length}`;
+            progressText.textContent = `${currentCardIndex} / ${currentSet.length}`;
         }
 
         // 「答えを見る」ボタンのイベントリスナー
         showAnswerButton.addEventListener('click', () => {
             cardBack.classList.remove('hidden');
             showAnswerButton.classList.add('hidden');
-            nextCardButton.classList.remove('hidden');
-            isShowingAnswer = true;
+            correctButton.classList.remove('hidden'); // 正解ボタンを表示
+            incorrectButton.classList.remove('hidden'); // 不正解ボタンを表示
+            window.isShowingAnswer = true; // windowオブジェクトのプロパティとして参照
         });
 
-        // 「次のカード」ボタンのイベントリスナー
-        nextCardButton.addEventListener('click', () => {
-            currentCardIndex++;
-            displayCard();
-            saveFlashcards(); // カードを進めたら保存
-        });
-
-        // 「答えを確認」ボタンのイベントリスナー
-        checkAnswerButton.addEventListener('click', () => {
-            const currentCard = flashcards[currentCardIndex];
-            const userAnswer = userInput.value.trim();
-            const correctAnswer = currentCard.term.trim();
+        // 「正解」ボタンのイベントリスナー
+        correctButton.addEventListener('click', () => {
+            const currentSet = window.isReviewMode ? incorrectCards : flashcards;
+            const currentCard = currentSet[currentCardIndex];
 
             feedbackMessage.classList.remove('hidden');
-            if (userAnswer === correctAnswer) {
-                feedbackMessage.textContent = '正解です！';
-                feedbackMessage.classList.remove('feedback-incorrect');
-                feedbackMessage.classList.add('feedback-correct');
-                // 正解したら自動的に次のカードへ
-                setTimeout(() => {
-                    currentCardIndex++;
-                    displayCard();
-                    saveFlashcards();
-                }, 1000);
+            feedbackMessage.textContent = '正解です！';
+            feedbackMessage.classList.remove('feedback-incorrect');
+            feedbackMessage.classList.add('feedback-correct');
+
+            // 復習モードで正解した場合、不正解リストから削除
+            if (window.isReviewMode) {
+                incorrectCards = incorrectCards.filter(card => card.term !== currentCard.term);
+                // 復習モードでは、カードを削除した際にインデックスを増やさない
+                // 次のカードは同じcurrentCardIndexに移動しているため
             } else {
-                feedbackMessage.textContent = `不正解です。正解は「${correctAnswer}」でした。`;
-                feedbackMessage.classList.remove('feedback-correct');
-                feedbackMessage.classList.add('feedback-incorrect');
-                // 不正解でも答えを表示
-                cardBack.classList.remove('hidden');
-                showAnswerButton.classList.add('hidden');
-                nextCardButton.classList.remove('hidden'); // 不正解でも「次のカード」ボタンを表示
-                isShowingAnswer = true;
+                // 通常モードではインデックスを増やす
+                currentCardIndex++;
             }
+            
+            displayCard();
+            saveFlashcards();
         });
 
-        // Enterキーで答えを確認
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                checkAnswerButton.click();
+        // 「不正解」ボタンのイベントリスナー
+        incorrectButton.addEventListener('click', () => {
+            const currentSet = window.isReviewMode ? incorrectCards : flashcards;
+            const currentCard = currentSet[currentCardIndex];
+
+            feedbackMessage.classList.remove('hidden');
+            feedbackMessage.textContent = `不正解です。正解は「${currentCard.term}」でした。`;
+            feedbackMessage.classList.remove('feedback-correct');
+            feedbackMessage.classList.add('feedback-incorrect');
+
+            // 不正解の場合、不正解リストに追加（重複は避ける）
+            const isAlreadyInIncorrect = incorrectCards.some(card => card.term === currentCard.term);
+            if (!isAlreadyInIncorrect) {
+                incorrectCards.push(currentCard);
             }
+
+            currentCardIndex++; // 不正解の場合は常に次のカードに進む
+            displayCard();
+            saveFlashcards();
+        });
+
+        // 「不正解を復習」ボタンのイベントリスナー
+        toggleReviewModeButton.addEventListener('click', () => {
+            window.isReviewMode = !window.isReviewMode; // windowオブジェクトのプロパティとして参照
+            if (window.isReviewMode) {
+                // 復習モードに入る
+                if (incorrectCards.length === 0) {
+                    feedbackMessage.textContent = "復習する不正解のカードがありません！";
+                    feedbackMessage.classList.remove('hidden');
+                    window.isReviewMode = false; // 不正解カードがない場合は復習モードに入らない
+                    return;
+                }
+                incorrectCards = shuffleArray([...incorrectCards]); // 不正解カードをシャッフル
+                currentCardIndex = 0;
+                toggleReviewModeButton.textContent = '通常学習に戻る';
+                feedbackMessage.classList.add('hidden'); // モード切り替え時はフィードバックを非表示
+            } else {
+                // 通常学習モードに戻る
+                flashcards = shuffleArray([...pdfData]); // メインセットをシャッフル
+                currentCardIndex = 0;
+                toggleReviewModeButton.textContent = '不正解を復習';
+            }
+            displayCard();
+            saveFlashcards();
         });
 
         // 学習完了モーダルを表示
-        function showCompletionModal() {
+        function showCompletionModal(title, message, hasIncorrectCards) {
+            document.querySelector('#completion-modal h2').textContent = title;
+            document.querySelector('#completion-modal p').textContent = message;
+            
+            // 不正解カードがある場合にのみモーダル内の「不正解を復習」ボタンを表示
+            if (hasIncorrectCards) {
+                reviewIncorrectFromModalButton.classList.remove('hidden');
+            } else {
+                reviewIncorrectFromModalButton.classList.add('hidden');
+            }
             completionModal.classList.remove('hidden');
         }
 
@@ -558,11 +623,28 @@
             closeModal();
             currentCardIndex = 0;
             flashcards = shuffleArray([...pdfData]); // カードをシャッフルしてリセット
+            incorrectCards = []; // 不正解カードもクリア
+            window.isReviewMode = false; // 復習モードを解除
+            toggleReviewModeButton.textContent = '不正解を復習';
+            // 不正解カードがクリアされたので、ボタンを隠す
+            toggleReviewModeButton.classList.add('hidden'); 
             saveFlashcards(); // リセットした状態を保存
             displayCard();
         }
         // グローバルスコープでアクセスできるようにする
         window.restartLearning = restartLearning;
+
+        // モーダルから不正解の復習を開始する関数
+        function startReviewFromModal() {
+            closeModal(); // モーダルを閉じる
+            window.isReviewMode = true;
+            incorrectCards = shuffleArray([...incorrectCards]); // 不正解カードをシャッフル
+            currentCardIndex = 0;
+            toggleReviewModeButton.textContent = '通常学習に戻る'; // メイン画面のボタンテキストも更新
+            displayCard();
+            saveFlashcards();
+        }
+        window.startReviewFromModal = startReviewFromModal;
 
 
         // 開始ボタンのイベントリスナー
