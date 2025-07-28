@@ -257,10 +257,24 @@
     <script type="module">
         // Firebaseの設定と初期化
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, query, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // !!! IMPORTANT: Replace these placeholder values with your actual Firebase project configuration !!!
+        // You can find these values in your Firebase project settings under "Project settings" -> "General" -> "Your apps"
+        // Look for the "Firebase SDK snippet" and copy the config object.
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY", // 例: "AIzaSyB-C1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6"
+            authDomain: "YOUR_AUTH_DOMAIN", // 例: "your-project-id.firebaseapp.com"
+            projectId: "YOUR_PROJECT_ID", // 例: "your-project-id"
+            storageBucket: "YOUR_STORAGE_BUCKET", // 例: "your-project-id.appspot.com"
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // 例: "1234567890"
+            appId: "YOUR_APP_ID" // 例: "1:1234567890:web:abcdef1234567890"
+        };
+        // Canvas環境でのみ提供される__app_id変数を考慮
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
@@ -335,8 +349,17 @@
         const completionModal = document.getElementById('completion-modal');
         const reviewIncorrectFromModalButton = document.getElementById('review-incorrect-from-modal'); // モーダル内の不正解を復習ボタン
 
+        let userId = null; // userIdの宣言をauth.onAuthStateChangedの外に移動
+        let flashcards = []; // メインの学習用カードセット
+        let incorrectCards = []; // 不正解だったカードを格納する配列
+        let currentCardIndex = 0;
+        window.isReviewMode = false; // 復習モードかどうか (windowオブジェクトに明示的に定義)
+
+
         // Firebase認証状態の監視
-        onAuthStateChanged(auth, async (user) => {
+        // onAuthStateChanged は Firebase SDK が初期化された後に呼び出す
+        // Firebaseの設定を直接コードに記述したため、initializeAppの後にauthを初期化
+        auth.onAuthStateChanged(async (user) => {
             if (user) {
                 userId = user.uid;
                 console.log("Firebase authenticated. User ID:", userId);
@@ -345,6 +368,7 @@
             } else {
                 // 匿名認証
                 try {
+                    // Canvas環境でのみ提供される__initial_auth_token変数を考慮
                     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                     if (initialAuthToken) {
                         await signInWithCustomToken(auth, initialAuthToken);
@@ -364,7 +388,7 @@
                 return;
             }
 
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // すでにグローバルスコープで定義
             const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/flashcards`, 'userProgress');
 
             try {
@@ -411,7 +435,7 @@
                 console.warn("User ID not available, cannot save flashcards.");
                 return;
             }
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // すでにグローバルスコープで定義
             const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/flashcards`, 'userProgress');
             try {
                 await setDoc(userDocRef, {
@@ -448,7 +472,8 @@
 
             if (currentSet.length === 0) {
                 if (window.isReviewMode) {
-                    cardFront.textContent = "復習する不正解のカードがありません！";
+                    // 復習モードでカードがなくなった場合
+                    showCompletionModal("復習モード完了！", "すべての不正解カードを復習しました。", incorrectCards.length > 0);
                     // 復習モードを自動で終了し、通常学習に戻る
                     window.isReviewMode = false;
                     flashcards = shuffleArray([...pdfData]); // メインセットをシャッフル
@@ -540,7 +565,7 @@
             if (window.isReviewMode) {
                 incorrectCards = incorrectCards.filter(card => card.term !== currentCard.term);
                 // 復習モードでは、カードを削除した際にインデックスを増やさない
-                // 次のカードは同じcurrentCardIndexに移動しているため
+                // 次のカードは同じcurrentCardIndexに移動しているため、displayCard()が適切に処理する
             } else {
                 // 通常モードではインデックスを増やす
                 currentCardIndex++;
@@ -652,11 +677,16 @@
             startScreen.classList.add('hidden');
             flashcardSection.classList.remove('hidden');
             // 認証が完了しているか確認し、完了していればカードをロード
-            if (userId) {
-                loadFlashcards();
+            // Firebaseの初期化と認証が完了してからloadFlashcardsを呼び出す
+            if (!userId) { // userIdがまだ設定されていない場合のみ認証プロセスを開始
+                auth.signInAnonymously().then(userCredential => {
+                    userId = userCredential.user.uid;
+                    loadFlashcards();
+                }).catch(error => {
+                    console.error("Anonymous authentication failed:", error);
+                });
             } else {
-                // 認証がまだの場合は、onAuthStateChangedでロードされるのを待つ
-                console.log("Waiting for Firebase authentication to complete before loading flashcards.");
+                loadFlashcards(); // すでに認証済みなら直接ロード
             }
         });
 
