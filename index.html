@@ -260,13 +260,16 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // !!! IMPORTANT: Replace these placeholder values with your actual Firebase project configuration !!!
+        // You can find these values in your Firebase project settings under "Project settings" -> "General" -> "Your apps"
+        // Look for the "Firebase SDK snippet" and copy the config object.
         const firebaseConfig = {
-          apiKey: "AIzaSyDPBV96vCoC03F5M6c4DQHCK1MRNCLwHs4",
-          authDomain: "measure-memorize-app.firebaseapp.com",
-          projectId: "measure-memorize-app",
-          storageBucket: "measure-memorize-app.firebasestorage.app",
-          messagingSenderId: "172217316953",
-          appId: "1:172217316953:web:6be1f1dc8369dcbbc7a348"
+          apiKey: "AIzaSyDPBV96vCoC03F5M6c4DQHCK1MRNCLwHs4", // あなたのAPIキーに置き換えてください
+          authDomain: "measure-memorize-app.firebaseapp.com", // あなたの認証ドメインに置き換えてください
+          projectId: "measure-memorize-app", // あなたのプロジェクトIDに置き換えてください
+          storageBucket: "measure-memorize-app.firebasestorage.app", // あなたのストレージバケットに置き換えてください
+          messagingSenderId: "172217316953", // あなたのメッセンジャー送信者IDに置き換えてください
+          appId: "1:172217316953:web:6be1f1dc8369dcbbc7a348" // あなたのアプリIDに置き換えてください
         };
         // Canvas環境でのみ提供される__app_id変数を考慮
         const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
@@ -276,15 +279,17 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // userId, flashcards, incorrectCards, currentCardIndex変数をwindowオブジェクトのプロパティとして宣言し、再宣言エラーを回避
-        window.appUserId = null; 
-        window.flashcards = []; // メインの学習用カードセット
-        window.incorrectCards = []; // 不正解だったカードを格納する配列
-        window.currentCardIndex = 0;
-        window.isReviewMode = false; // 復習モードかどうか (windowオブジェクトに明示的に定義)
+        // これらの変数は、スクリプトが複数回ロードされる環境で問題を引き起こす可能性があるため、
+        // `window`オブジェクトのプロパティとして宣言し、初期化時に既に値があればそれを再利用します。
+        window.appUserId = window.appUserId || null; 
+        window.flashcards = window.flashcards || []; 
+        window.incorrectCards = window.incorrectCards || []; 
+        window.currentCardIndex = window.currentCardIndex || 0;
+        window.isReviewMode = window.isReviewMode || false; 
 
         // PDFから抽出した用語と定義のデータ
-        const pdfData = [
+        // この変数は一度だけ初期化されるようにwindowオブジェクトにアタッチします。
+        window.pdfData = window.pdfData || [
             { term: "有限加法族", definition: "空間 Xの部分集合の族Fが、A∈Fならば $A^{c}\\in\\mathfrak{F}$、A, B∈FならばA∪B∈F なる3つの条件を満たすとき、Fを有限加法族という。" },
             { term: "Jordan 測度", definition: "F-集合函数 $m(A)$ がすべての $A\\in\\mathfrak{F}$ に対して $0\\le m(A)\\le\\infty,$ 特に $m(\\emptyset)=0$、A, B∈F. $A\\cap B=\\emptyset$ ならば $m(A+B)=m(A)+m(B)$ を満たすとき、mを (Fの上の) Jordan 測度という。" },
             { term: "外測度", definition: "空間Xのすべての部分集合Aに対して定義された集合函数 $\\Gamma(A)$ があって $0\\le\\Gamma(A)\\le\\infty,\\Gamma(\\emptyset)=0,$ $A\\subset B$ ならば $\\Gamma(A)\\le\\Gamma(B)$, $\\Gamma(\\bigcup_{n=1}^{\\infty}A_{n})\\le\\sum_{(n=1)}^{\\infty}\\Gamma(A_{n})$ なる3つの条件を満たすとき、$\\Gamma$ を外測度という。" },
@@ -347,16 +352,6 @@
         const completionModal = document.getElementById('completion-modal');
         const reviewIncorrectFromModalButton = document.getElementById('review-incorrect-from-modal'); // モーダル内の不正解を復習ボタン
 
-        // userId, flashcards, incorrectCards, currentCardIndex変数をwindowオブジェクトのプロパティとして宣言し、再宣言エラーを回避
-        // これらの変数は、スクリプトが複数回ロードされる環境で問題を引き起こす可能性があるため、windowオブジェクトにアタッチします。
-        // `let`キーワードは削除し、直接`window.`プレフィックスを使用します。
-        window.appUserId = window.appUserId || null; // 既に存在すればその値を、なければnull
-        window.flashcards = window.flashcards || []; // 既に存在すればその値を、なければ空配列
-        window.incorrectCards = window.incorrectCards || []; // 既に存在すればその値を、なければ空配列
-        window.currentCardIndex = window.currentCardIndex || 0; // 既に存在すればその値を、なければ0
-        window.isReviewMode = window.isReviewMode || false; // 復習モードかどうか (windowオブジェクトに明示的に定義)
-
-
         // Firebase認証状態の監視
         // onAuthStateChanged は Firebase SDK が初期化された後に呼び出す
         // Firebaseの設定を直接コードに記述したため、initializeAppの後にauthを初期化
@@ -396,14 +391,14 @@
                 const docSnap = await getDoc(userDocRef);
                 if (docSnap.exists()) {
                     const savedState = docSnap.data();
-                    window.flashcards = savedState.flashcards || shuffleArray([...pdfData]); // window.flashcardsを使用
+                    window.flashcards = savedState.flashcards || shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                     window.incorrectCards = savedState.incorrectCards || []; // window.incorrectCardsを使用
                     window.currentCardIndex = savedState.currentCardIndex || 0; // window.currentCardIndexを使用
                     window.isReviewMode = savedState.isReviewMode || false; // 復習モードの状態をロード
                     console.log("Flashcards loaded from Firestore:", window.flashcards);
                 } else {
                     console.log("No saved flashcards found, initializing new set.");
-                    window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+                    window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                     window.incorrectCards = [];
                     window.isReviewMode = false;
                 }
@@ -422,7 +417,7 @@
 
             } catch (e) {
                 console.error("Error loading flashcards:", e);
-                window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+                window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                 window.incorrectCards = [];
                 window.isReviewMode = false;
                 updateProgressBar();
@@ -477,7 +472,7 @@
                     showCompletionModal("復習モード完了！", "すべての不正解カードを復習しました。", window.incorrectCards.length > 0); // window.incorrectCardsを使用
                     // 復習モードを自動で終了し、通常学習に戻る
                     window.isReviewMode = false;
-                    window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+                    window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                     window.currentCardIndex = 0; // window.currentCardIndexを使用
                     toggleReviewModeButton.textContent = '不正解を復習';
                     toggleReviewModeButton.classList.add('hidden'); // 不正解カードがないのでボタンを非表示
@@ -497,7 +492,7 @@
                     showCompletionModal("復習モード完了！", "すべての不正解カードを復習しました。", window.incorrectCards.length > 0); // window.incorrectCardsを使用
                     // 復習モードを自動で終了し、通常学習に戻る
                     window.isReviewMode = false;
-                    window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+                    window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                     window.currentCardIndex = 0; // window.currentCardIndexを使用
                     toggleReviewModeButton.textContent = '不正解を復習';
                     saveFlashcards();
@@ -614,7 +609,7 @@
                 feedbackMessage.classList.add('hidden'); // モード切り替え時はフィードバックを非表示
             } else {
                 // 通常学習モードに戻る
-                window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+                window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
                 window.currentCardIndex = 0; // window.currentCardIndexを使用
                 toggleReviewModeButton.textContent = '不正解を復習';
             }
@@ -648,7 +643,7 @@
         function restartLearning() {
             closeModal();
             window.currentCardIndex = 0; // window.currentCardIndexを使用
-            window.flashcards = shuffleArray([...pdfData]); // window.flashcardsを使用
+            window.flashcards = shuffleArray([...window.pdfData]); // window.flashcardsを使用, window.pdfDataを使用
             window.incorrectCards = []; // window.incorrectCardsを使用
             window.isReviewMode = false; // 復習モードを解除
             toggleReviewModeButton.textContent = '不正解を復習';
