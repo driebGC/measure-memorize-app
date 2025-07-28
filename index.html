@@ -260,16 +260,13 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // !!! IMPORTANT: Replace these placeholder values with your actual Firebase project configuration !!!
-        // You can find these values in your Firebase project settings under "Project settings" -> "General" -> "Your apps"
-        // Look for the "Firebase SDK snippet" and copy the config object.
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // 例: "AIzaSyB-C1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6"
-            authDomain: "YOUR_AUTH_DOMAIN", // 例: "your-project-id.firebaseapp.com"
-            projectId: "YOUR_PROJECT_ID", // 例: "your-project-id"
-            storageBucket: "YOUR_STORAGE_BUCKET", // 例: "your-project-id.appspot.com"
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // 例: "1234567890"
-            appId: "YOUR_APP_ID" // 例: "1:1234567890:web:abcdef1234567890"
+          apiKey: "AIzaSyDPBV96vCoC03F5M6c4DQHCK1MRNCLwHs4",
+          authDomain: "measure-memorize-app.firebaseapp.com",
+          projectId: "measure-memorize-app",
+          storageBucket: "measure-memorize-app.firebasestorage.app",
+          messagingSenderId: "172217316953",
+          appId: "1:172217316953:web:6be1f1dc8369dcbbc7a348"
         };
         // Canvas環境でのみ提供される__app_id変数を考慮
         const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
