@@ -260,16 +260,14 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // !!! IMPORTANT: Replace these placeholder values with your actual Firebase project configuration !!!
-        // You can find these values in your Firebase project settings under "Project settings" -> "General" -> "Your apps"
-        // Look for the "Firebase SDK snippet" and copy the config object.
+        // !!! ここをあなたのFirebaseプロジェクトの設定値に置き換えてください !!!
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // 例: "AIzaSyB-C1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6"
-            authDomain: "YOUR_AUTH_DOMAIN", // 例: "your-project-id.firebaseapp.com"
-            projectId: "YOUR_PROJECT_ID", // 例: "your-project-id"
-            storageBucket: "YOUR_STORAGE_BUCKET", // 例: "your-project-id.appspot.com"
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // 例: "1234567890"
-            appId: "YOUR_APP_ID" // 例: "1:1234567890:web:abcdef1234567890"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
         // Canvas環境でのみ提供される__app_id変数を考慮
         const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
@@ -348,13 +346,6 @@
         const progressText = document.getElementById('progress-text');
         const completionModal = document.getElementById('completion-modal');
         const reviewIncorrectFromModalButton = document.getElementById('review-incorrect-from-modal'); // モーダル内の不正解を復習ボタン
-
-        let userId = null; // userIdの宣言をauth.onAuthStateChangedの外に移動
-        let flashcards = []; // メインの学習用カードセット
-        let incorrectCards = []; // 不正解だったカードを格納する配列
-        let currentCardIndex = 0;
-        window.isReviewMode = false; // 復習モードかどうか (windowオブジェクトに明示的に定義)
-
 
         // Firebase認証状態の監視
         // onAuthStateChanged は Firebase SDK が初期化された後に呼び出す
